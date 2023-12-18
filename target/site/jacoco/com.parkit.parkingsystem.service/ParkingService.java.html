@@ -108,10 +108,10 @@ public class ParkingService {
 <span class="fc" id="L108">            ticket.setOutTime(outTime);</span>
 
             // Utilisation du rabais si ce n'est pas le premier passage
-<span class="pc bpc" id="L111" title="1 of 2 branches missed.">            boolean applyDiscount = nbTickets &gt; 0;</span>
+<span class="fc bfc" id="L111" title="All 2 branches covered.">            boolean applyDiscount = nbTickets &gt; 0;</span>
 <span class="fc" id="L112">            fareCalculatorService.calculateFare(ticket, applyDiscount);</span>
 
-<span class="pc bpc" id="L114" title="1 of 2 branches missed.">            if (ticketDAO.updateTicket(ticket)) {</span>
+<span class="fc bfc" id="L114" title="All 2 branches covered.">            if (ticketDAO.updateTicket(ticket)) {</span>
 <span class="fc" id="L115">                ParkingSpot parkingSpot = ticket.getParkingSpot();</span>
 <span class="fc" id="L116">                parkingSpot.setAvailable(true);</span>
 <span class="fc" id="L117">                parkingSpotDAO.updateParking(parkingSpot);</span>
@@ -120,10 +120,10 @@ public class ParkingService {
 <span class="fc" id="L120">                System.out.println(</span>
 <span class="fc" id="L121">                        &quot;Recorded out-time for vehicle number: &quot; + ticket.getVehicleRegNumber() + &quot; is: &quot; + outTime);</span>
 <span class="fc" id="L122">            } else {</span>
-<span class="nc" id="L123">                System.out.println(&quot;Unable to update ticket information. An error occurred&quot;);</span>
+<span class="fc" id="L123">                System.out.println(&quot;Unable to update ticket information. An error occurred&quot;);</span>
             }
-<span class="nc" id="L125">        } catch (Exception e) {</span>
-<span class="nc" id="L126">            logger.error(&quot;Unable to process exiting vehicle&quot;, e);</span>
+<span class="fc" id="L125">        } catch (Exception e) {</span>
+<span class="fc" id="L126">            logger.error(&quot;Unable to process exiting vehicle&quot;, e);</span>
         }
 
 <span class="fc" id="L129">    }</span>
