@@ -43,6 +43,7 @@ public class ParkingServiceTest {
             e.printStackTrace();
             throw new RuntimeException("Failed to set up test mock objects");
         }
+
     }
 
     @Test
@@ -79,4 +80,37 @@ public class ParkingServiceTest {
         verify(parkingSpotDAO, times(1)).updateParking(any(ParkingSpot.class));
         verify(ticketDAO, times(1)).saveTicket(any(Ticket.class));
     }
+
+    @Test
+    public void processExitingVehicleTestUnableUpdate() throws Exception {
+        // Configuration
+        ParkingSpot parkingSpot = new ParkingSpot(1, ParkingType.CAR, false);
+        Ticket ticket = new Ticket();
+        ticket.setInTime(new Date(System.currentTimeMillis() - (60 * 60 * 1000)));
+        ticket.setParkingSpot(parkingSpot);
+        ticket.setVehicleRegNumber("ABCDEF");
+
+        // Stubbing pour ticketDAO.getTicket(anyString())
+        when(ticketDAO.getTicket(anyString())).thenReturn(ticket);
+
+        // Stubbing pour ticketDAO.updateTicket(any(Ticket.class))
+        // Assurez-vous que updateTicket renvoie false pour simuler l'échec de la mise à
+        // jour
+        when(ticketDAO.updateTicket(any(Ticket.class))).thenReturn(false);
+
+        // Utilisation de lenient() pour rendre l'interaction avec updateParking non
+        // requise
+        lenient().when(parkingSpotDAO.updateParking(any(ParkingSpot.class))).thenReturn(true);
+
+        // Action
+        parkingService.processExitingVehicle();
+
+        // Assertion
+        // Vérifie que ticketDAO.updateTicket a été appelé une fois avec n'importe
+        // quelle instance de Ticket
+        verify(ticketDAO, times(1)).updateTicket(any(Ticket.class));
+        // Vérifie que parkingSpotDAO.updateParking n'a pas été appelé
+        verify(parkingSpotDAO, never()).updateParking(any(ParkingSpot.class));
+    }
+
 }
