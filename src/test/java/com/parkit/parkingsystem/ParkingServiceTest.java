@@ -16,6 +16,9 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.util.Date;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.*;
@@ -38,7 +41,7 @@ public class ParkingServiceTest {
     @BeforeEach
     private void setUpPerTest() {
         try {
-            when(inputReaderUtil.readVehicleRegistrationNumber()).thenReturn("ABCDEF");
+            lenient().when(inputReaderUtil.readVehicleRegistrationNumber()).thenReturn("ABCDEF");
         } catch (Exception e) {
             e.printStackTrace();
             throw new RuntimeException("Failed to set up test mock objects");
@@ -83,7 +86,7 @@ public class ParkingServiceTest {
 
     @Test
     public void processExitingVehicleTestUnableUpdate() throws Exception {
-        // Configuration
+        // Arrange
         ParkingSpot parkingSpot = new ParkingSpot(1, ParkingType.CAR, false);
         Ticket ticket = new Ticket();
         ticket.setInTime(new Date(System.currentTimeMillis() - (60 * 60 * 1000)));
@@ -93,24 +96,41 @@ public class ParkingServiceTest {
         // Stubbing pour ticketDAO.getTicket(anyString())
         when(ticketDAO.getTicket(anyString())).thenReturn(ticket);
 
-        // Stubbing pour ticketDAO.updateTicket(any(Ticket.class))
-        // Assurez-vous que updateTicket renvoie false pour simuler l'échec de la mise à
-        // jour
+        // Stubbing pour ticketDAO.updateTicket(any(Ticket.class)) Assurez-vous que
+        // updateTicket renvoie false pour simuler l'échec de la mise à jour
         when(ticketDAO.updateTicket(any(Ticket.class))).thenReturn(false);
 
         // Utilisation de lenient() pour rendre l'interaction avec updateParking non
         // requise
         lenient().when(parkingSpotDAO.updateParking(any(ParkingSpot.class))).thenReturn(true);
 
-        // Action
+        // Act
         parkingService.processExitingVehicle();
 
-        // Assertion
-        // Vérifie que ticketDAO.updateTicket a été appelé une fois avec n'importe
-        // quelle instance de Ticket
+        // Assert Vérifie que ticketDAO.updateTicket a été appelé une fois avec
+        // n'importe quelle instance de Ticket
         verify(ticketDAO, times(1)).updateTicket(any(Ticket.class));
         // Vérifie que parkingSpotDAO.updateParking n'a pas été appelé
         verify(parkingSpotDAO, never()).updateParking(any(ParkingSpot.class));
     }
 
+    @Test
+    public void testGetNextParkingNumberIfAvailable() {
+        // Arrange
+        when(inputReaderUtil.readSelection()).thenReturn(1);
+        when(parkingSpotDAO.getNextAvailableSlot(any(ParkingType.class))).thenReturn(1);
+
+        // Act
+        ParkingSpot result = parkingService.getNextParkingNumberIfAvailable();
+
+        // Assert
+        assertNotNull(result);
+        assertEquals(1, result.getId());
+        assertEquals(ParkingType.CAR, result.getParkingType());
+        assertTrue(result.isAvailable());
+
+        // Verify interactions with mocked objects
+        verify(parkingSpotDAO, times(1)).getNextAvailableSlot(any(ParkingType.class));
+        verifyNoMoreInteractions(parkingSpotDAO);
+    }
 }
