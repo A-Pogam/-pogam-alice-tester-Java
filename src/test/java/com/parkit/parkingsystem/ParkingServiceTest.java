@@ -152,4 +152,20 @@ public class ParkingServiceTest {
         verifyNoMoreInteractions(parkingSpotDAO);
     }
 
+    @Test
+    public void testGetNextParkingNumberIfAvailableParkingNumberWrongArgument() {
+        // Arrange
+        when(inputReaderUtil.readSelection()).thenReturn(3); // Valeur incorrecte
+        // On ne configure pas le comportement de getNextAvailableSlot
+
+        // Act
+        ParkingSpot parkingSpot = parkingService.getNextParkingNumberIfAvailable();
+
+        // Assert
+        assertNull(parkingSpot);
+
+        // Verify interactions with mocked objects
+        verifyZeroInteractions(parkingSpotDAO); // Aucune interaction avec parkingSpotDAO ne devrait avoir lieu
+    }
+
 }
