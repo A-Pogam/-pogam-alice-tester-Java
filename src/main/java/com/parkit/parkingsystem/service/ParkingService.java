@@ -112,6 +112,9 @@ public class ParkingService {
             int nbTickets = getNbTicket(vehicleRegNumber);
 
             Ticket ticket = ticketDAO.getTicket(vehicleRegNumber);
+            if (ticket == null) {
+                throw new RuntimeException("Ticket is null. Exiting vehicle process cannot continue.");
+            }
             Date outTime = new Date();
             ticket.setOutTime(outTime);
 
@@ -127,6 +130,11 @@ public class ParkingService {
                 System.out.println("Please pay the parking fare: " + ticket.getPrice());
                 System.out.println(
                         "Recorded out-time for vehicle number: " + ticket.getVehicleRegNumber() + " is: " + outTime);
+                System.out.println(
+                        "Out-time set for vehicle number: " + ticket.getVehicleRegNumber() + " is: " + outTime);
+                System.out.println("Fare calculated for vehicle number: " + ticket.getVehicleRegNumber() + " is: "
+                        + ticket.getPrice());
+
             } else {
                 System.out.println("Unable to update ticket information. An error occurred");
             }

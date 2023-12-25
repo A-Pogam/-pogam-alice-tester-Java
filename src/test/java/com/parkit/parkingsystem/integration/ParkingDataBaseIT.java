@@ -65,6 +65,12 @@ public class ParkingDataBaseIT {
 
     }
 
+    private double calculateExpectedDuration(Date inTime, Date outTime) {
+        long inTimeMillis = inTime.getTime();
+        long outTimeMillis = outTime.getTime();
+        return (outTimeMillis - inTimeMillis) / (60.0 * 60.0 * 1000.0);
+    }
+
     @Test
     public void testParkingACar() {
         try {
@@ -113,22 +119,27 @@ public class ParkingDataBaseIT {
 
     @Test
     public void testParkingLotExit() {
-        ParkingService parkingService = new ParkingService(inputReaderUtil, parkingSpotDAO, ticketDAO);
-        parkingService.processIncomingVehicle();
+        try {
+            // Arrange
+            ParkingService parkingService = new ParkingService(inputReaderUtil, parkingSpotDAO, ticketDAO);
 
-        // Retrieve the incoming vehicle ticket
-        Ticket incomingVehicleTicket = ticketDAO.getTicket("ABCDEF");
+            // Act: Vehicle entry
+            parkingService.processIncomingVehicle();
 
-        if (incomingVehicleTicket != null) {
+            // Assert: Check the incoming ticket
+            System.out.println("Before getTicket call");
+
+            Ticket incomingVehicleTicket = ticketDAO.getTicket("ABCDEF");
+            System.out.println("After getTicket call");
             System.out.println("Incoming vehicle ticket found: " + incomingVehicleTicket.getId());
             System.out.println("In-time: " + incomingVehicleTicket.getInTime());
+            assertNotNull(incomingVehicleTicket);
 
-            // Adjust the date manipulation logic as needed
+            // Act: Update the inTime of the ticket in the database
             Date theHour = new Date(60 * 60 * 1000);
             Date theHourBefore = new Date(incomingVehicleTicket.getInTime().getTime() - theHour.getTime());
             incomingVehicleTicket.setInTime(theHourBefore);
 
-            // Update the inTime of the ticket in the database
             try (Connection conn = ticketDAO.dataBaseConfig.getConnection();
                     PreparedStatement pstmt = conn.prepareStatement("UPDATE ticket SET IN_TIME = ? WHERE ID = ?")) {
                 pstmt.setTimestamp(1, new Timestamp(incomingVehicleTicket.getInTime().getTime()));
@@ -139,25 +150,37 @@ public class ParkingDataBaseIT {
                 throw new RuntimeException("Failed to update test ticket with earlier inTime value");
             }
 
+            // Act: Vehicle exit
             parkingService.processExitingVehicle();
 
-            // Retrieve the exiting vehicle ticket
+            // Assert: Check the exiting ticket
             Ticket exitingVehicleTicket = ticketDAO.getTicket("ABCDEF");
-
-            if (exitingVehicleTicket != null) {
-                System.out.println("Exiting vehicle ticket found: " + exitingVehicleTicket.getId());
-                System.out.println("Out-time: " + exitingVehicleTicket.getOutTime());
-                System.out.println("Price: " + exitingVehicleTicket.getPrice());
-            } else {
-                System.out.println("Exiting vehicle ticket is null");
-            }
-
             assertNotNull(exitingVehicleTicket);
-            assertNotNull(exitingVehicleTicket.getOutTime());
-            assertNotNull(exitingVehicleTicket.getPrice());
+            System.out.println("Exiting vehicle ticket found: " + exitingVehicleTicket.getId());
+            System.out.println("Out-time: " + exitingVehicleTicket.getOutTime());
+            System.out.println("Price: " + exitingVehicleTicket.getPrice());
 
-            // TODO: Add assertions for fare and out time in the database
+            // Assert: Example assertion for out time
+            assertNotNull(exitingVehicleTicket.getOutTime());
+            assertTrue(exitingVehicleTicket.getOutTime().after(incomingVehicleTicket.getInTime()));
+
+            // Assert: Example assertion for fare
+            // Assume that CAR_RATE_PER_HOUR is 10.0, and there is no discount in this case
+            double expectedFare = 10.0
+                    * calculateExpectedDuration(incomingVehicleTicket.getInTime(), exitingVehicleTicket.getOutTime());
+
+            // Delta est la marge d'erreur tolérée pour les calculs à virgule flottante
+            double delta = 0.01;
+
+            // Vérifie que le tarif calculé correspond au tarif attendu avec une marge
+            // d'erreur de delta
+            assertEquals(expectedFare, exitingVehicleTicket.getPrice(), delta);
+
+        } catch (Exception e) {
+            // Handle the exception (logging, etc.)
+            e.printStackTrace();
         }
+        // TODO: Add assertions for fare and out time in the database
     }
 
 }
