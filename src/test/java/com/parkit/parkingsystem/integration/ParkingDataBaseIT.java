@@ -13,17 +13,24 @@ import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.Timestamp;
+
+import java.util.Date;
+
 import static org.junit.jupiter.api.Assertions.*;
 
 @ExtendWith(MockitoExtension.class)
@@ -60,7 +67,8 @@ public class ParkingDataBaseIT {
 
     @Test
     public void testParkingACar() {
-        try { // Stubbing inputReaderUtil and dataBasePrepareService
+        try {
+            // Stubbing inputReaderUtil and dataBasePrepareService
             lenient().when(inputReaderUtil.readSelection()).thenReturn(1);
             lenient().when(inputReaderUtil.readVehicleRegistrationNumber()).thenReturn("ABCDEF");
             dataBasePrepareService.clearDataBaseEntries();
@@ -70,9 +78,7 @@ public class ParkingDataBaseIT {
 
             // Stubbing the call to getNextParkingNumberIfAvailable
             ParkingSpot parkingSpot = new ParkingSpot(1, ParkingType.CAR, true);
-            when(parkingSpotDAO.getNextAvailableSlot(any())).thenReturn(parkingSpot.getId()); // Retourne l'ID du
-                                                                                              // parking
-                                                                                              // spot
+            when(parkingSpotDAO.getNextAvailableSlot(any())).thenReturn(parkingSpot.getId());
 
             // Stubbing the call to ticketDAO.saveTicket
             doNothing().when(ticketDAO).saveTicket(any());
@@ -84,31 +90,74 @@ public class ParkingDataBaseIT {
             verify(ticketDAO, times(1)).saveTicket(any());
 
             // Other assertions as needed
-            // For example, you can verify that the parkingSpotDAO.updateParking method was
-            // called
             verify(parkingSpotDAO, times(1)).updateParking(parkingSpot);
 
-        } catch (
+            // Assert that the ticket is saved in the database
+            Ticket savedTicket = ticketDAO.getTicket("ABCDEF");
+            assertNotNull(savedTicket);
+            assertEquals("ABCDEF", savedTicket.getVehicleRegNumber());
 
-        Exception e) {
-            // Gére l'exception (affichage de logs, etc.)
+            // Assert that the parking spot is updated in the database
+            ParkingSpot updatedParkingSpot = parkingSpotDAO.getParkingSpot(parkingSpot.getId());
+            assertNotNull(updatedParkingSpot);
+            assertFalse(updatedParkingSpot.isAvailable());
+
+        } catch (Exception e) {
+            // Handle the exception (logging, etc.)
             e.printStackTrace();
         }
+
         // TODO: check that a ticket is actualy saved in DB and Parking table is updated
         // with availability
     }
 
     @Test
     public void testParkingLotExit() {
-        testParkingACar();
         ParkingService parkingService = new ParkingService(inputReaderUtil, parkingSpotDAO, ticketDAO);
-        // Mock the behavior of getNbTicket to return a specific value
-        when(ticketDAO.getNbTicket(anyString())).thenReturn(1);
+        parkingService.processIncomingVehicle();
 
-        parkingService.processExitingVehicle();
+        // Retrieve the incoming vehicle ticket
+        Ticket incomingVehicleTicket = ticketDAO.getTicket("ABCDEF");
 
-        // TODO: check that the fare generated and out time are populated correctly in
-        // the database
+        if (incomingVehicleTicket != null) {
+            System.out.println("Incoming vehicle ticket found: " + incomingVehicleTicket.getId());
+            System.out.println("In-time: " + incomingVehicleTicket.getInTime());
+
+            // Adjust the date manipulation logic as needed
+            Date theHour = new Date(60 * 60 * 1000);
+            Date theHourBefore = new Date(incomingVehicleTicket.getInTime().getTime() - theHour.getTime());
+            incomingVehicleTicket.setInTime(theHourBefore);
+
+            // Update the inTime of the ticket in the database
+            try (Connection conn = ticketDAO.dataBaseConfig.getConnection();
+                    PreparedStatement pstmt = conn.prepareStatement("UPDATE ticket SET IN_TIME = ? WHERE ID = ?")) {
+                pstmt.setTimestamp(1, new Timestamp(incomingVehicleTicket.getInTime().getTime()));
+                pstmt.setInt(2, incomingVehicleTicket.getId());
+                pstmt.execute();
+            } catch (Exception er) {
+                er.printStackTrace();
+                throw new RuntimeException("Failed to update test ticket with earlier inTime value");
+            }
+
+            parkingService.processExitingVehicle();
+
+            // Retrieve the exiting vehicle ticket
+            Ticket exitingVehicleTicket = ticketDAO.getTicket("ABCDEF");
+
+            if (exitingVehicleTicket != null) {
+                System.out.println("Exiting vehicle ticket found: " + exitingVehicleTicket.getId());
+                System.out.println("Out-time: " + exitingVehicleTicket.getOutTime());
+                System.out.println("Price: " + exitingVehicleTicket.getPrice());
+            } else {
+                System.out.println("Exiting vehicle ticket is null");
+            }
+
+            assertNotNull(exitingVehicleTicket);
+            assertNotNull(exitingVehicleTicket.getOutTime());
+            assertNotNull(exitingVehicleTicket.getPrice());
+
+            // TODO: Add assertions for fare and out time in the database
+        }
     }
 
 }

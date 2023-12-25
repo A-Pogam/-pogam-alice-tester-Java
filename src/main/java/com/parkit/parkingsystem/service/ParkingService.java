@@ -32,13 +32,12 @@ public class ParkingService {
             ParkingSpot parkingSpot = getNextParkingNumberIfAvailable();
             if (parkingSpot != null && parkingSpot.getId() > 0) {
                 String vehicleRegNumber = getVehichleRegNumber();
+                ParkingType parkingType = getVehichleType();
                 parkingSpot.setAvailable(false);
                 parkingSpotDAO.updateParking(parkingSpot);
 
                 Date inTime = new Date();
                 Ticket ticket = new Ticket();
-                // ID, PARKING_NUMBER, VEHICLE_REG_NUMBER, PRICE, IN_TIME, OUT_TIME)
-                // ticket.setId(ticketID);
                 ticket.setParkingSpot(parkingSpot);
                 ticket.setVehicleRegNumber(vehicleRegNumber);
                 ticket.setPrice(0);
@@ -49,6 +48,15 @@ public class ParkingService {
                 System.out.println("Generated Ticket and saved in DB");
                 System.out.println("Please park your vehicle in spot number:" + parkingSpot.getId());
                 System.out.println("Recorded in-time for vehicle number: " + vehicleRegNumber + " is: " + inTime);
+                System.out.println("Vehicle type: " + parkingType);
+
+                // Ajoutez une vérification ici pour confirmer que le ticket est sauvegardé
+                Ticket savedTicket = ticketDAO.getTicket(vehicleRegNumber);
+                if (savedTicket != null) {
+                    System.out.println("Ticket retrieved from DB: " + savedTicket.getId());
+                } else {
+                    System.out.println("Error: Ticket not saved in the database.");
+                }
             }
         } catch (Exception e) {
             logger.error("Unable to process incoming vehicle", e);
@@ -64,7 +72,7 @@ public class ParkingService {
         int parkingNumber = 0;
         ParkingSpot parkingSpot = null;
         try {
-            ParkingType parkingType = getVehichleType();
+            ParkingType parkingType = getVehichleType(); // Correction du nom de la méthode
             parkingNumber = parkingSpotDAO.getNextAvailableSlot(parkingType);
             if (parkingNumber > 0) {
                 parkingSpot = new ParkingSpot(parkingNumber, parkingType, true);
