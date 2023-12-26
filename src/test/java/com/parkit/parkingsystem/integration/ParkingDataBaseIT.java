@@ -13,7 +13,6 @@ import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -181,6 +180,60 @@ public class ParkingDataBaseIT {
             e.printStackTrace();
         }
         // TODO: Add assertions for fare and out time in the database
+    }
+
+    @Test
+    public void testParkingLotExitRecurringUser() {
+        try {
+            // Arrange
+            ParkingService parkingService = new ParkingService(inputReaderUtil, parkingSpotDAO, ticketDAO);
+
+            // Act: Vehicle entry for a recurring user
+            parkingService.processIncomingVehicle();
+
+            // Assert: Check the incoming ticket for a recurring user
+            Ticket incomingVehicleTicket = ticketDAO.getTicket("RecurringUser123");
+            System.out.println("After getTicket call");
+            System.out.println("Incoming vehicle ticket found: " + incomingVehicleTicket.getId());
+            System.out.println("In-time: " + incomingVehicleTicket.getInTime());
+            assertNotNull(incomingVehicleTicket);
+
+            // Act: Update the inTime of the ticket in the database
+            Date theHour = new Date(60 * 60 * 1000);
+            Date theHourBefore = new Date(incomingVehicleTicket.getInTime().getTime() - theHour.getTime());
+            incomingVehicleTicket.setInTime(theHourBefore);
+
+            try (Connection conn = ticketDAO.dataBaseConfig.getConnection();
+                    PreparedStatement pstmt = conn.prepareStatement("UPDATE ticket SET IN_TIME = ? WHERE ID = ?")) {
+                pstmt.setTimestamp(1, new Timestamp(incomingVehicleTicket.getInTime().getTime()));
+                pstmt.setInt(2, incomingVehicleTicket.getId());
+                pstmt.execute();
+            } catch (Exception er) {
+                er.printStackTrace();
+                throw new RuntimeException("Failed to update test ticket with earlier inTime value");
+            }
+
+            // Act: Vehicle exit for a recurring user
+            parkingService.processExitingVehicle();
+
+            // Assert: Check the exiting ticket for a recurring user
+            Ticket exitingVehicleTicket = ticketDAO.getTicket("RecurringUser123");
+            assertNotNull(exitingVehicleTicket);
+
+            // Assert: Example assertion for out time
+            assertNotNull(exitingVehicleTicket.getOutTime());
+            assertTrue(exitingVehicleTicket.getOutTime().after(incomingVehicleTicket.getInTime()));
+
+            // Assert: Example assertion for fare with 5% discount
+            double expectedFare = 0.95 * 10.0
+                    * calculateExpectedDuration(incomingVehicleTicket.getInTime(), exitingVehicleTicket.getOutTime());
+            double delta = 0.01;
+            assertEquals(expectedFare, exitingVehicleTicket.getPrice(), delta);
+
+        } catch (Exception e) {
+            // Handle the exception (logging, etc.)
+            e.printStackTrace();
+        }
     }
 
 }
