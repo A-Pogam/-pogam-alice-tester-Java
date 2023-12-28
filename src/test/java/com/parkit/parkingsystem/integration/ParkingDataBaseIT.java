@@ -1,5 +1,6 @@
 package com.parkit.parkingsystem.integration;
 
+import com.parkit.parkingsystem.constants.Fare;
 import com.parkit.parkingsystem.constants.ParkingType;
 import com.parkit.parkingsystem.dao.ParkingSpotDAO;
 import com.parkit.parkingsystem.dao.TicketDAO;
@@ -165,7 +166,7 @@ public class ParkingDataBaseIT {
 
             // Assert: Example assertion for fare
             // Assume that CAR_RATE_PER_HOUR is 10.0, and there is no discount in this case
-            double expectedFare = 10.0
+            double expectedFare = Fare.CAR_RATE_PER_HOUR
                     * calculateExpectedDuration(incomingVehicleTicket.getInTime(), exitingVehicleTicket.getOutTime());
 
             // Delta est la marge d'erreur tolérée pour les calculs à virgule flottante
@@ -192,10 +193,7 @@ public class ParkingDataBaseIT {
             parkingService.processIncomingVehicle();
 
             // Assert: Check the incoming ticket for a recurring user
-            Ticket incomingVehicleTicket = ticketDAO.getTicket("RecurringUser123");
-            System.out.println("After getTicket call");
-            System.out.println("Incoming vehicle ticket found: " + incomingVehicleTicket.getId());
-            System.out.println("In-time: " + incomingVehicleTicket.getInTime());
+            Ticket incomingVehicleTicket = ticketDAO.getTicket("ABCDEF");
             assertNotNull(incomingVehicleTicket);
 
             // Act: Update the inTime of the ticket in the database
@@ -216,8 +214,11 @@ public class ParkingDataBaseIT {
             // Act: Vehicle exit for a recurring user
             parkingService.processExitingVehicle();
 
+            parkingService.processIncomingVehicle();
+            parkingService.processExitingVehicle();
+
             // Assert: Check the exiting ticket for a recurring user
-            Ticket exitingVehicleTicket = ticketDAO.getTicket("RecurringUser123");
+            Ticket exitingVehicleTicket = ticketDAO.getTicket("ABCDEF");
             assertNotNull(exitingVehicleTicket);
 
             // Assert: Example assertion for out time
@@ -225,7 +226,7 @@ public class ParkingDataBaseIT {
             assertTrue(exitingVehicleTicket.getOutTime().after(incomingVehicleTicket.getInTime()));
 
             // Assert: Example assertion for fare with 5% discount
-            double expectedFare = 0.95 * 10.0
+            double expectedFare = 0.95 * Fare.CAR_RATE_PER_HOUR
                     * calculateExpectedDuration(incomingVehicleTicket.getInTime(), exitingVehicleTicket.getOutTime());
             double delta = 0.01;
             assertEquals(expectedFare, exitingVehicleTicket.getPrice(), delta);

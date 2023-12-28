@@ -119,7 +119,7 @@ public class ParkingService {
             ticket.setOutTime(outTime);
 
             // Utilisation du rabais si ce n'est pas le premier passage
-            boolean applyDiscount = nbTickets > 0;
+            boolean applyDiscount = nbTickets > 1;
             fareCalculatorService.calculateFare(ticket, applyDiscount);
 
             if (ticketDAO.updateTicket(ticket)) {
