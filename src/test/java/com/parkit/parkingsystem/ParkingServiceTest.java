@@ -97,8 +97,8 @@ public class ParkingServiceTest {
         // Stubbing pour ticketDAO.getTicket(anyString())
         when(ticketDAO.getTicket(anyString())).thenReturn(ticket);
 
-        // Stubbing pour ticketDAO.updateTicket(any(Ticket.class)) Assurez-vous que
-        // updateTicket renvoie false pour simuler l'échec de la mise à jour
+        // Stubbing pour ticketDAO.updateTicket(any(Ticket.class)) updateTicket renvoie
+        // false pour simuler l'échec de la mise à jour
         when(ticketDAO.updateTicket(any(Ticket.class))).thenReturn(false);
 
         // Utilisation de lenient() pour rendre l'interaction avec updateParking non
